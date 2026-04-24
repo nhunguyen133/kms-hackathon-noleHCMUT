@@ -7,6 +7,30 @@ import api from '../api/axios';
 import Button from '../components/Button';
 import { Link, useNavigate } from 'react-router-dom';
 
+const MOCK_AT_RISK_STUDENTS = [
+  {
+    user_id: 'mock-1',
+    name: 'Nguyen Van An',
+    email: 'an.nguyen@student.local',
+    avg_score: 46,
+    weak_topics: ['Loops', 'Functions']
+  },
+  {
+    user_id: 'mock-2',
+    name: 'Tran Minh Chau',
+    email: 'chau.tran@student.local',
+    avg_score: 52,
+    weak_topics: ['SQL Joins', 'Normalization']
+  },
+  {
+    user_id: 'mock-3',
+    name: 'Le Hoang Duc',
+    email: 'duc.le@student.local',
+    avg_score: 39,
+    weak_topics: ['Pointers', 'Memory Management', 'Recursion']
+  }
+];
+
 const Dashboard = () => {
   const [catalogCourses, setCatalogCourses] = useState([]);
   const [enrolledCourses, setEnrolledCourses] = useState([]);
@@ -23,8 +47,7 @@ const Dashboard = () => {
         setCatalogCourses(catalog);
 
         if (isInstructor) {
-          const { data: riskData } = await api.get('/early-warning/at-risk');
-          setAtRiskStudents(riskData);
+          setAtRiskStudents(MOCK_AT_RISK_STUDENTS);
         } else {
           const { data: enrolled } = await api.get('/courses/enrolled');
           setEnrolledCourses(enrolled);
