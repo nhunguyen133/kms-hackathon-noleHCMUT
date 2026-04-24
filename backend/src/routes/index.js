@@ -8,5 +8,7 @@ const router = express.Router();
 router.use('/chat', chatRoutes);
 router.use('/auth', authRoutes);
 router.use('/quiz', quizRoutes);
+router.use("/courses", require("../modules/courses/courses.routes"));
+router.use("/lessons", require("../modules/lessons/lessons.routes"));
 
 module.exports = router;
