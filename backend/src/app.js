@@ -1,10 +1,13 @@
 const express = require('express');
 const routes = require('./routes');
 const logger = require('./utils/logger');
+const { startEarlyWarningCron } = require('./modules/early-warning/early-warning.cron');
 
 const app = express();
 
 app.use(express.json());
+
+startEarlyWarningCron();
 
 app.use('/api', routes);
 
