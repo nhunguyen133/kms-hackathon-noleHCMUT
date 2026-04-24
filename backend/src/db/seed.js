@@ -77,26 +77,10 @@ async function seed() {
       );
     }
 
-    // --- Course
+    // --- Course (idempotent)
+    // Reuse an existing course (for this instructor + title) to avoid duplicates.
     const {
-      rows: [course],
-    } = await client.query(
-      `INSERT INTO courses (title, description, teacher_id, subject, is_published)
-       VALUES ($1, $2, $3, $4, true)
-       RETURNING id`,
-      [
-        "Critical Thinking Basics",
-        "Demo course to test the backend.",
-        instructor.id,
-        "critical-thinking",
-      ],
-    );
-
-    // If the course already existed, the above would create duplicates.
-    // So we try to reuse an existing course for this instructor/title first.
-    // (Do it after insert for simplicity: if duplicates exist, we keep the earliest one.)
-    const {
-      rows: [courseCanonical],
+      rows: [existingCourse],
     } = await client.query(
       `SELECT id
        FROM courses
@@ -105,7 +89,24 @@ async function seed() {
        LIMIT 1`,
       [instructor.id, "Critical Thinking Basics"],
     );
-    const courseId = courseCanonical?.id ?? course.id;
+
+    let courseId = existingCourse?.id;
+    if (!courseId) {
+      const {
+        rows: [createdCourse],
+      } = await client.query(
+        `INSERT INTO courses (title, description, teacher_id, subject, is_published)
+         VALUES ($1, $2, $3, $4, true)
+         RETURNING id`,
+        [
+          "Critical Thinking Basics",
+          "Demo course to test the backend.",
+          instructor.id,
+          "critical-thinking",
+        ],
+      );
+      courseId = createdCourse.id;
+    }
 
     // --- Lessons
     const topics = [
