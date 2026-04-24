@@ -1,6 +1,6 @@
 const express = require('express');
 // import route cua services
-const chatRoutes = require('../modules/chat/chat.route');
+const chatRoutes = require('../modules/chat/chat.routes');
 const authRoutes = require('../modules/auth/auth.routes');
 const quizRoutes = require('../modules/quiz/quiz.routes');
 const learningPathRoutes = require('../modules/learning-path/learning-path.routes');
