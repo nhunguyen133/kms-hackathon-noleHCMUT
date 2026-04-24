@@ -15,5 +15,6 @@ router.use('/learning-path', learningPathRoutes);
 router.use('/early-warning', earlyWarningRoutes);
 router.use("/courses", require("../modules/courses/courses.routes"));
 router.use("/lessons", require("../modules/lessons/lessons.routes"));
+router.use("/dashboard", require("../modules/dashboard/dashboard.routes"));
 
 module.exports = router;

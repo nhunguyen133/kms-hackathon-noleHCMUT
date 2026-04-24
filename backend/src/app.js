@@ -4,6 +4,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const routes = require('./routes');
 const logger = require('./utils/logger');
+const { startEarlyWarningCron } = require('./modules/early-warning/early-warning.cron');
 
 const app = express();
 
@@ -15,6 +16,8 @@ app.use(morgan('combined', { // Ghi log mọi request (rất tốt để debug l
         write: (message) => logger.info(message.trim()),
     },
 }));
+
+startEarlyWarningCron();
 
 // ROUTES (Định tuyến API)
 app.use('/api', routes);
