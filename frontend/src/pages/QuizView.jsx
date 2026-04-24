@@ -73,7 +73,6 @@ const QuizView = () => {
       }
     } catch (err) {
       console.error("Failed to submit answer:", err);
-      alert("Error submitting answer.");
     } finally {
       setSubmitting(false);
     }
@@ -215,16 +214,19 @@ const QuizView = () => {
                   "p-4 rounded-2xl text-left border transition-all duration-200 flex items-center justify-between group",
                   isSelected && !feedback && "bg-indigo-600/10 border-indigo-500 text-white",
                   !isSelected && !feedback && "bg-slate-800/40 border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-600",
-                  isCorrectFeedback && "bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.1)]",
-                  isWrongFeedback && "bg-red-500/10 border-red-500 text-red-400",
-                  isActuallyCorrect && "bg-emerald-500/10 border-emerald-500/50 text-emerald-400",
+                  isCorrectFeedback && "bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/50",
+                  isWrongFeedback && "bg-red-500/10 border-red-500 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.15)] ring-1 ring-red-500/50",
+                  isActuallyCorrect && "bg-emerald-500/5 border-emerald-500/30 text-emerald-400",
                   feedback && !isSelected && !isActuallyCorrect && "opacity-40"
                 )}
               >
                 <div className="flex items-center gap-4">
                   <span className={clsx(
                     "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm border transition-colors",
-                    isSelected ? "bg-indigo-500 text-white border-indigo-400" : "bg-slate-900 text-slate-500 border-slate-700 group-hover:border-slate-500"
+                    isCorrectFeedback && "bg-emerald-500 text-white border-emerald-400",
+                    isWrongFeedback && "bg-red-500 text-white border-red-400",
+                    isSelected && !feedback && "bg-indigo-500 text-white border-indigo-400",
+                    !isSelected && "bg-slate-900 text-slate-500 border-slate-700 group-hover:border-slate-500"
                   )}>
                     {option.key}
                   </span>

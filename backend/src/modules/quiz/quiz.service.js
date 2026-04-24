@@ -1,4 +1,5 @@
 const db = require('../../db');
+const crypto = require('crypto');
 
 const DIFFICULTY_SCALE = ['easy', 'medium', 'hard'];
 
@@ -163,9 +164,9 @@ async function finishSession(userId, lessonId, state) {
   
   if (quizIdRow) {
     await db.query(
-      `INSERT INTO quiz_results (user_id, quiz_id, score, difficulty_level, answers)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [userId, quizIdRow.id, score, state.currentDifficulty, JSON.stringify(state.answers)]
+      `INSERT INTO quiz_results (id, user_id, quiz_id, score, difficulty_level, answers)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [crypto.randomUUID(), userId, quizIdRow.id, score, state.currentDifficulty, JSON.stringify(state.answers)]
     );
   }
 
