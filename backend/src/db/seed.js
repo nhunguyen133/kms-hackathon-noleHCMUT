@@ -96,6 +96,7 @@ async function seed() {
       }
     }
 
+    const lessonsData = require("./lessonsData");
     let lessonCounter = 100;
     let quizCounter = 1000;
     let questionCounter = 10000;
@@ -106,33 +107,38 @@ async function seed() {
       const courseId = UUID_COURSES[c];
       
       for (let i = 0; i < 5; i++) {
-        const topic = topics[i % topics.length];
+        const defaultLData = {
+          topic: topics[i % topics.length],
+          title: `Lesson ${i + 1}: ${topics[i % topics.length]}`,
+          content: `Detailed content for ${topics[i % topics.length]}.`,
+          quizTitle: `Quiz for Lesson ${lessonCounter}`,
+          questions: [
+            { content: `Question 1 (easy)`, difficulty: "easy", topic: topics[i % topics.length], correct_answer: "A", options: [{key:"A",text:"A"},{key:"B",text:"B"},{key:"C",text:"C"},{key:"D",text:"D"}] },
+            { content: `Question 2 (medium)`, difficulty: "medium", topic: topics[i % topics.length], correct_answer: "B", options: [{key:"A",text:"A"},{key:"B",text:"B"},{key:"C",text:"C"},{key:"D",text:"D"}] },
+            { content: `Question 3 (hard)`, difficulty: "hard", topic: topics[i % topics.length], correct_answer: "C", options: [{key:"A",text:"A"},{key:"B",text:"B"},{key:"C",text:"C"},{key:"D",text:"D"}] }
+          ]
+        };
+        const lData = c === 0 ? (lessonsData[i] || defaultLData) : defaultLData;
+
         const lessonIdStr = String(lessonCounter);
         
         await client.query(
           `INSERT INTO lessons (id, course_id, title, content, topic, difficulty_level, "order", is_published)
            VALUES ($1, $2, $3, $4, $5, 'medium', $6, true)`,
-          [lessonIdStr, courseId, `Lesson ${i + 1}: ${topic}`, `Detailed content for ${topic}.`, topic, i + 1]
+          [lessonIdStr, courseId, lData.title, lData.content, lData.topic, i + 1]
         );
 
         const quizIdStr = String(quizCounter);
         await client.query(
           `INSERT INTO quizzes (id, lesson_id, title) VALUES ($1, $2, $3)`,
-          [quizIdStr, lessonIdStr, `Quiz for Lesson ${lessonCounter}`]
+          [quizIdStr, lessonIdStr, lData.quizTitle]
         );
 
-        const diffs = ["easy", "medium", "hard"];
-        for (let d = 0; d < 3; d++) {
-          const options = [
-            { key: "A", text: "Answer A" },
-            { key: "B", text: "Answer B" },
-            { key: "C", text: "Answer C" },
-            { key: "D", text: "Answer D" },
-          ];
+        for (const q of lData.questions) {
           await client.query(
             `INSERT INTO questions (id, quiz_id, content, options, correct_answer, topic, difficulty_level)
-             VALUES ($1, $2, $3, $4::jsonb, 'A', $5, $6)`,
-            [String(questionCounter++), quizIdStr, `Question for ${topic} (${diffs[d]})`, JSON.stringify(options), topic, diffs[d]]
+             VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7)`,
+            [String(questionCounter++), quizIdStr, q.content, JSON.stringify(q.options), q.correct_answer, q.topic, q.difficulty]
           );
         }
 
