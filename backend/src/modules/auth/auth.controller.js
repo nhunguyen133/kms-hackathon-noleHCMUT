@@ -56,3 +56,8 @@ exports.login = async (req, res) => {
         res.status(error.status || 500).json({ message: 'Internal Server Error' });
     }
 };
+
+exports.logout = async (req, res) => {
+    // In a stateless JWT implementation, logout is handled by the client deleting the token.
+    res.status(200).json({ message: 'Logged out successfully' });
+};
