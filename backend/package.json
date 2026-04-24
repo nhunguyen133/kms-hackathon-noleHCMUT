@@ -6,20 +6,25 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "db:init": "node src/db/init.js",
+    "db:seed": "node src/db/seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "axios": "^1.15.2",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.1",
     "node-cron": "^4.2.1",
-    "pg": "^8.20.0"
+    "pg": "^8.20.0",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
