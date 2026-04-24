@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Bot, User, Trash2 } from 'lucide-react';
+import { Send, Sparkles, Bot, User, Trash2, BookOpen } from 'lucide-react';
 import api from '../api/axios';
 import clsx from 'clsx';
 import Button from '../components/Button';
@@ -9,6 +9,12 @@ const ChatView = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // Context selection states
+  const [courses, setCourses] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState('');
+  const [lessons, setLessons] = useState([]);
+  const [selectedLesson, setSelectedLesson] = useState('');
+
   // Keep the same session ID per page load so the backend retains context
   const sessionId = useRef(crypto.randomUUID());
   const chatEndRef = useRef(null);
@@ -21,6 +27,37 @@ const ChatView = () => {
     scrollToBottom();
   }, [messages, loading]);
 
+  // Fetch enrolled courses for context selection
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const { data } = await api.get('/courses/enrolled');
+        setCourses(data);
+      } catch (err) {
+        console.error("Failed to fetch courses:", err);
+      }
+    };
+    fetchCourses();
+  }, []);
+
+  // Fetch lessons when a course is selected
+  useEffect(() => {
+    const fetchLessons = async () => {
+      if (!selectedCourse) {
+        setLessons([]);
+        setSelectedLesson('');
+        return;
+      }
+      try {
+        const { data } = await api.get(`/lessons?courseId=${selectedCourse}`);
+        setLessons(data);
+      } catch (err) {
+        console.error("Failed to fetch lessons:", err);
+      }
+    };
+    fetchLessons();
+  }, [selectedCourse]);
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
@@ -31,11 +68,15 @@ const ChatView = () => {
     setLoading(true);
 
     try {
-      const { data } = await api.post('/chat', {
+      const payload = {
         message: input,
         sessionId: sessionId.current,
-        // Omitting lessonId for general chat
-      });
+      };
+      if (selectedLesson) {
+        payload.lessonId = selectedLesson;
+      }
+
+      const { data } = await api.post('/chat', payload);
       
       setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
     } catch (err) {
@@ -60,7 +101,7 @@ const ChatView = () => {
     <div className="max-w-5xl mx-auto h-[calc(100vh-120px)] flex flex-col glass rounded-3xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* Header */}
-      <header className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-md z-10">
+      <header className="p-6 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/50 backdrop-blur-md z-10">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 ring-1 ring-indigo-500/50">
             <Bot size={24} />
@@ -76,6 +117,37 @@ const ChatView = () => {
           <Trash2 size={18} /> New Session
         </Button>
       </header>
+
+      {/* Context Selection Bar */}
+      <div className="px-6 py-3 bg-slate-800/30 border-b border-slate-800 flex flex-col sm:flex-row gap-4 items-center z-10">
+        <div className="flex items-center gap-2 text-sm text-slate-400 w-full sm:w-auto flex-shrink-0">
+          <BookOpen size={16} className="text-indigo-400" />
+          <span>Context:</span>
+        </div>
+        <select 
+          className="bg-slate-900 border border-slate-700 text-slate-300 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:max-w-xs p-2.5 outline-none"
+          value={selectedCourse}
+          onChange={(e) => setSelectedCourse(e.target.value)}
+        >
+          <option value="">General Chat (No specific course)</option>
+          {courses.map(course => (
+            <option key={course.id} value={course.id}>{course.title}</option>
+          ))}
+        </select>
+
+        {selectedCourse && (
+          <select 
+            className="bg-slate-900 border border-slate-700 text-slate-300 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:max-w-xs p-2.5 outline-none"
+            value={selectedLesson}
+            onChange={(e) => setSelectedLesson(e.target.value)}
+          >
+            <option value="">Whole Course</option>
+            {lessons.map(lesson => (
+              <option key={lesson.id} value={lesson.id}>{lesson.title}</option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {/* Chat Area */}
       <div className="flex-1 overflow-auto p-6 space-y-6">

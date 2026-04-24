@@ -49,7 +49,9 @@ const LessonView = () => {
       const { data } = await api.post('/chat', {
         message: input,
         sessionId: sessionId.current,
-        lessonId
+        lessonId,
+        subject: lesson ? `${lesson.topic} - ${lesson.title}` : 'Chưa xác định',
+        performanceLevel: 'Trung bình' // Placeholder, có thể tích hợp thực tế sau
       });
       setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
     } catch (err) {

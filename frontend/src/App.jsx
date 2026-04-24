@@ -9,6 +9,7 @@ import QuizView from './pages/QuizView';
 import CourseManager from './pages/CourseManager';
 import ChatView from './pages/ChatView';
 import MyCourses from './pages/MyCourses';
+import ProfileView from './pages/ProfileView';
 import MainLayout from './layouts/MainLayout';
 
 // Simple Protected Route wrapper
@@ -72,6 +73,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ChatView />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/profile" 
+          element={
+            <ProtectedRoute>
+              <ProfileView />
             </ProtectedRoute>
           } 
         />

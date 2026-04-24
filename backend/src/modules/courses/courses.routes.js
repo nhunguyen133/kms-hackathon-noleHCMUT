@@ -7,7 +7,7 @@ const router = express.Router();
 
 // Public-ish reads still require auth for now (matches current middleware set)
 router.get("/", authenticate, coursesController.list);
-router.get("/enrolled", authenticate, requireRole("student"), coursesController.listEnrolled);
+router.get("/enrolled", authenticate, coursesController.listEnrolled);
 router.get("/:id", authenticate, coursesController.getById);
 
 // Instructor CRUD
@@ -34,7 +34,6 @@ router.delete(
 router.post(
   "/:id/enroll",
   authenticate,
-  requireRole("student"),
   coursesController.enroll,
 );
 

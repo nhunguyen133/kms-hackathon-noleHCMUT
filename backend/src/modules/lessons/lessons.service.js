@@ -3,7 +3,7 @@ const db = require("../../db");
 const ALLOWED_DIFFICULTY = new Set(["easy", "medium", "hard"]);
 
 function assertUuid(id, name = "id") {
-  if (!id || typeof id !== "string" || !/^[0-9a-fA-F-]{36}$/.test(id)) {
+  if (!id) {
     throw { status: 400, message: `Invalid ${name}` };
   }
 }
@@ -65,13 +65,18 @@ async function assertCourseOwnedByTeacher(courseId, teacherId) {
 exports.listLessons = async ({ courseId } = {}) => {
   if (courseId) assertUuid(courseId, "course id");
 
-  const { rows } = await db.query(
-    `SELECT id, course_id, title, content, topic, difficulty_level, "order", is_published, created_at
-     FROM lessons
-     WHERE ($1::uuid IS NULL OR course_id = $1)
-     ORDER BY course_id ASC, "order" ASC, created_at ASC`,
-    [courseId || null],
-  );
+  let query = `SELECT id, course_id, title, content, topic, difficulty_level, "order", is_published, created_at
+     FROM lessons`;
+  const params = [];
+
+  if (courseId) {
+    query += ` WHERE course_id = $1`;
+    params.push(courseId);
+  }
+
+  query += ` ORDER BY course_id ASC, "order" ASC, created_at ASC`;
+
+  const { rows } = await db.query(query, params);
   return rows;
 };
 

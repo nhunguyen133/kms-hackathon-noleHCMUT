@@ -34,7 +34,7 @@ const CourseManager = () => {
           }
           
           // Fetch lessons for this course
-          const { data: lessonsData } = await api.get(`/courses/${courseId}/lessons`);
+          const { data: lessonsData } = await api.get(`/lessons?courseId=${courseId}`);
           setLessons(lessonsData);
         } catch (err) {
           console.error("Failed to fetch course details:", err);

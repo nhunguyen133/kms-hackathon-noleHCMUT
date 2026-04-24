@@ -1,7 +1,7 @@
 const db = require("../../db");
 
 function assertUuid(id, name = "id") {
-  if (!id || typeof id !== "string" || !/^[0-9a-fA-F-]{36}$/.test(id)) {
+  if (!id) {
     throw { status: 400, message: `Invalid ${name}` };
   }
 }

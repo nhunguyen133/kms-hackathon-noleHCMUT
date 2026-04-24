@@ -1,11 +1,10 @@
 const db = require('../../db/index');
-const axios = require('axios');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const logger = require('../../utils/logger');
+const crypto = require('crypto');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const ai = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = ai.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 const SOCRATIC_SYSTEM_PROMPT = `
 Bạn là ThinkFirst, một Trợ giảng AI (Teaching Assistant) xuất sắc, kiên nhẫn và tận tâm. Nhiệm vụ tối thượng của bạn là giúp học sinh làm chủ tư duy, tuyệt đối không phục vụ thói quen ỷ lại hay "brainrot"[cite: 12].
@@ -58,7 +57,7 @@ Em tính Delta chính xác rồi đấy, rất tốt! Thầy gợi ý một chú
 `;
 
 
-exports.sendMessage = async ({ userId, message, sessionId, lessonId }) => {
+exports.sendMessage = async ({ userId, message, sessionId, lessonId, subject = 'Chưa xác định', performanceLevel = 'Cần nỗ lực' }) => {
   // 1. Lấy lịch sử chat từ DB
   const { rows: history } = await db.query(
     `SELECT role, ai_response, user_message, message_index
@@ -72,38 +71,74 @@ exports.sendMessage = async ({ userId, message, sessionId, lessonId }) => {
   const nextIndex = history.length;
   const canRevealAnswer = nextIndex >= 6;
 
-  // 2. Format lịch sử chat cho Gemini 
-  const historyForGemini = history.map(r => ({
-    role: r.role === 'user' ? 'user' : 'model', 
-    parts: [{ text: r.role === 'user' ? r.user_message : r.ai_response }],
-  }));
+  // Render các biến môi trường động vào System Prompt
+  const dynamicSystemPrompt = SOCRATIC_SYSTEM_PROMPT
+    .replace('{{current_subject}}', subject)
+    .replace('{{student_performance_level}}', performanceLevel)
+    .replace(/\{\{interaction_count\}\}/g, nextIndex.toString());
 
-  // 3. Khởi tạo Model và gọi API
-  const model = ai.getGenerativeModel({ 
-    model: "gemini-2.0-flash", 
-    systemInstruction: SOCRATIC_SYSTEM_PROMPT + (canRevealAnswer ? " (Bây giờ bạn có thể gợi ý sát hơn)" : ""),
-  });
+  // 2. Format lịch sử chat cho Gemini
+  // Đảm bảo lịch sử luôn bắt đầu bằng 'user' và xen kẽ 'user'/'model'
+  const historyForGemini = [];
+  let expectedRole = 'user';
 
-  // Khởi tạo phiên chat với lịch sử cũ
-  const chat = model.startChat({
-    history: historyForGemini,
-  });
+  for (const r of history) {
+    const text = r.role === 'user' ? r.user_message : r.ai_response;
+    const currentGeminiRole = r.role === 'user' ? 'user' : 'model';
+    
+    // Chỉ thêm nếu có nội dung và đúng thứ tự role (user -> model -> user -> model)
+    if (text && text.trim() && currentGeminiRole === expectedRole) {
+      historyForGemini.push({
+        role: currentGeminiRole,
+        parts: [{ text: text.trim() }],
+      });
+      expectedRole = expectedRole === 'user' ? 'model' : 'user';
+    }
+  }
 
-  // Chỉ gọi API gửi tin nhắn mới NHẤT đi
-  const result = await chat.sendMessage(message);
-  const aiResponse = result.response.text();
+  // Nếu lịch sử kết thúc bằng 'user', Gemini sẽ báo lỗi khi ta sendMessage(user_message)
+  // Vì vậy ta phải cắt bỏ tin nhắn user cuối cùng trong history nếu có
+  if (historyForGemini.length > 0 && historyForGemini[historyForGemini.length - 1].role === 'user') {
+    historyForGemini.pop();
+  }
+
+  logger.info(`Chat history processed for Gemini: ${historyForGemini.length} messages`);
+
+  let aiResponse = "";
+  try {
+    // 3. Gọi API Gemini
+    const model = ai.getGenerativeModel({ 
+      model: "gemini-2.0-flash", 
+      systemInstruction: dynamicSystemPrompt + (canRevealAnswer ? " (Bây giờ bạn có thể gợi ý sát hơn và đưa ra đáp án nếu học sinh đã nỗ lực đủ)" : ""),
+    });
+
+    const chat = model.startChat({
+      history: historyForGemini,
+    });
+
+    const result = await chat.sendMessage(message);
+    aiResponse = result.response.text();
+  } catch (error) {
+    logger.error("Gemini API Error:", error.message);
+    // FALLBACK HACKATHON: Nếu lỗi (vd: hết Quota), trả về tin nhắn giả lập để demo không bị sập
+    if (error.message.includes('429') || error.message.includes('Quota') || error.message.includes('API key')) {
+      aiResponse = `*(Hệ thống AI đang hết Quota API - Đây là phản hồi giả lập)*\n\nChào em, thầy thấy em đang học bài **${subject}**. Em có thể giải thích chi tiết hơn cách em định làm bước tiếp theo không?`;
+    } else {
+      throw error;
+    }
+  }
   
   // 4. Lưu cả tin nhắn của User và AI vào database 
   await db.query(
-    `INSERT INTO ai_interactions (user_id, session_id, lesson_id, role, user_message, message_index)
-     VALUES ($1, $2, $3, 'user', $4, $5)`,
-    [userId, sessionId, lessonId, message, nextIndex]
+    `INSERT INTO ai_interactions (id, user_id, session_id, lesson_id, role, user_message, message_index)
+     VALUES ($1, $2, $3, $4, 'user', $5, $6)`,
+    [crypto.randomUUID(), userId, sessionId, lessonId, message, nextIndex]
   );
   
   await db.query(
-    `INSERT INTO ai_interactions (user_id, session_id, lesson_id, role, ai_response, message_index)
-     VALUES ($1, $2, $3, 'assistant', $4, $5)`,
-    [userId, sessionId, lessonId, aiResponse, nextIndex + 1]
+    `INSERT INTO ai_interactions (id, user_id, session_id, lesson_id, role, ai_response, message_index)
+     VALUES ($1, $2, $3, $4, 'assistant', $5, $6)`,
+    [crypto.randomUUID(), userId, sessionId, lessonId, aiResponse, nextIndex + 1]
   );
   
   return { reply: aiResponse, nextIndex: nextIndex + 2, canRevealAnswer };

@@ -28,8 +28,12 @@ app.use((req, res, next) => {
 });
 
 app.use((err, req, res, next) => {
-  logger.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!', details: err.message });
+  logger.error(err.stack || err);
+  const status = err.status || 500;
+  res.status(status).json({ 
+    error: err.message || 'Something went wrong!', 
+    details: err.details 
+  });
 });
 
 module.exports = app;

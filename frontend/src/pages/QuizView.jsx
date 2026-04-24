@@ -7,7 +7,8 @@ import {
   Trophy,
   BrainCircuit,
   Timer,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import api from '../api/axios';
 import Button from '../components/Button';
@@ -18,6 +19,7 @@ const QuizView = () => {
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [quizState, setQuizState] = useState(null); // Contains { question, sessionState }
   const [selectedOption, setSelectedOption] = useState(null);
   const [feedback, setFeedback] = useState(null); // { isCorrect, correctAnswer }
@@ -26,11 +28,13 @@ const QuizView = () => {
 
   const startQuiz = async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data } = await api.get(`/quiz/${lessonId}/start`);
       setQuizState(data);
     } catch (err) {
       console.error("Failed to start quiz:", err);
+      setError(err.response?.data?.error || "This lesson does not have a quiz set up yet.");
     } finally {
       setLoading(false);
     }
@@ -69,6 +73,7 @@ const QuizView = () => {
       }
     } catch (err) {
       console.error("Failed to submit answer:", err);
+      alert("Error submitting answer.");
     } finally {
       setSubmitting(false);
     }
@@ -84,6 +89,23 @@ const QuizView = () => {
   };
 
   if (loading) return <div className="flex items-center justify-center h-[60vh]"><RefreshCw className="animate-spin text-indigo-500" size={48} /></div>;
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="glass p-12 rounded-3xl text-center space-y-6 max-w-md">
+          <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto ring-8 ring-red-500/5">
+            <AlertTriangle size={40} />
+          </div>
+          <h2 className="text-2xl font-bold text-white">Oops!</h2>
+          <p className="text-slate-400">{error}</p>
+          <Button variant="primary" onClick={() => navigate(-1)} className="w-full">
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (summary) {
     return (

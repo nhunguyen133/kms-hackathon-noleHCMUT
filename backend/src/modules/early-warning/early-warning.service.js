@@ -142,6 +142,25 @@ class EarlyWarningService {
             logger.error(`Error in scanStagnantProgress: ${error.message}`, { stack: error.stack });
         }
     }
+    async getAtRiskStudents(instructorId) {
+        const { rows } = await db.query(
+            `SELECT 
+                arf.id as flag_id, 
+                u.id as student_id, 
+                u.name as student_name, 
+                c.title as course_name, 
+                arf.indicator_type, 
+                arf.detail, 
+                arf.created_at
+             FROM at_risk_flags arf
+             JOIN users u ON arf.student_id = u.id
+             JOIN courses c ON arf.course_id = c.id
+             WHERE c.teacher_id = $1 AND arf.resolved_at IS NULL
+             ORDER BY arf.created_at DESC`,
+            [instructorId]
+        );
+        return rows;
+    }
 }
 
 module.exports = new EarlyWarningService();
