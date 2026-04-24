@@ -182,3 +182,16 @@ exports.listLessonsByCourse = async (courseId) => {
   );
   return rows;
 };
+
+exports.listEnrolledCourses = async (studentId) => {
+  assertUuid(studentId, "student id");
+  const { rows } = await db.query(
+    `SELECT c.id, c.title, c.description, c.teacher_id, c.subject, c.is_published, c.created_at, e.enrolled_at
+     FROM courses c
+     JOIN enrollments e ON c.id = e.course_id
+     WHERE e.student_id = $1
+     ORDER BY e.enrolled_at DESC`,
+    [studentId]
+  );
+  return rows;
+};

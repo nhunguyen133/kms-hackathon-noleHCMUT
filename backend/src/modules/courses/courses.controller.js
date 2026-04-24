@@ -9,6 +9,15 @@ exports.list = async (req, res, next) => {
   }
 };
 
+exports.listEnrolled = async (req, res, next) => {
+  try {
+    const courses = await coursesService.listEnrolledCourses(req.user.id);
+    res.json(courses);
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getById = async (req, res, next) => {
   try {
     const course = await coursesService.getCourseById(req.params.id);
