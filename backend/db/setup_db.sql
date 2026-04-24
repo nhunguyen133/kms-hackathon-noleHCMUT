@@ -12,14 +12,6 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS login_attempts (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    ip_address      VARCHAR(45) NOT NULL,
-    attempted_at    TIMESTAMPTZ DEFAULT NOW(),
-    success         BOOLEAN DEFAULT FALSE
-);
-CREATE INDEX IF NOT EXISTS idx_login_attempts_ip ON login_attempts (ip_address, attempted_at);
-
 -- 3.2 Courses & Enrollment
 CREATE TABLE IF NOT EXISTS courses (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
