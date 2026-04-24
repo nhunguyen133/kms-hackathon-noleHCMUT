@@ -1,0 +1,12 @@
+{
+  "watch": ["index.js", "src"],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules",
+    "**/*.log",
+    ".env*",
+    "package-lock.json"
+  ],
+  "legacyWatch": true,
+  "signal": "SIGTERM"
+}
