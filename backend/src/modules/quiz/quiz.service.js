@@ -128,9 +128,9 @@ async function getNextQuestion(lessonId, difficulty, excludeIds) {
      JOIN quizzes qz ON qz.id = q.quiz_id
      WHERE qz.lesson_id = $1
      AND q.difficulty_level = $2
-     AND q.id != ALL($3::uuid[])
+     AND q.id != ALL($3::text[])
      ORDER BY RANDOM() LIMIT 1`,
-    [lessonId, difficulty, excludeIds.length > 0 ? excludeIds : [null]]
+    [lessonId, difficulty, excludeIds]
   );
   return rows[0];
 }
