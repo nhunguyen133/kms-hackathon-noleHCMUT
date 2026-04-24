@@ -1,10 +1,13 @@
 const db = require('../../db/index');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const OpenAI = require('openai');
 const logger = require('../../utils/logger');
 const crypto = require('crypto');
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const ai = new GoogleGenerativeAI(GEMINI_API_KEY);
+const SAMBANOVA_API_KEY = process.env.SAMBANOVA_API_KEY;
+const openai = new OpenAI({
+  apiKey: SAMBANOVA_API_KEY,
+  baseURL: "https://api.sambanova.ai/v1",
+});
 
 const SOCRATIC_SYSTEM_PROMPT = `
 Bạn là ThinkFirst, một Trợ giảng AI (Teaching Assistant) xuất sắc, kiên nhẫn và tận tâm. Nhiệm vụ tối thượng của bạn là giúp học sinh làm chủ tư duy, tuyệt đối không phục vụ thói quen ỷ lại hay "brainrot"[cite: 12].
@@ -77,52 +80,50 @@ exports.sendMessage = async ({ userId, message, sessionId, lessonId, subject = '
     .replace('{{student_performance_level}}', performanceLevel)
     .replace(/\{\{interaction_count\}\}/g, nextIndex.toString());
 
-  // 2. Format lịch sử chat cho Gemini
-  // Đảm bảo lịch sử luôn bắt đầu bằng 'user' và xen kẽ 'user'/'model'
-  const historyForGemini = [];
-  let expectedRole = 'user';
+  // 2. Format lịch sử chat cho SambaNova
+  const messages = [
+    {
+      role: 'system',
+      content: dynamicSystemPrompt + (canRevealAnswer ? " (Bây giờ bạn có thể gợi ý sát hơn và đưa ra đáp án nếu học sinh đã nỗ lực đủ)" : ""),
+    },
+  ];
 
   for (const r of history) {
     const text = r.role === 'user' ? r.user_message : r.ai_response;
-    const currentGeminiRole = r.role === 'user' ? 'user' : 'model';
+    const role = r.role === 'user' ? 'user' : 'assistant';
     
-    // Chỉ thêm nếu có nội dung và đúng thứ tự role (user -> model -> user -> model)
-    if (text && text.trim() && currentGeminiRole === expectedRole) {
-      historyForGemini.push({
-        role: currentGeminiRole,
-        parts: [{ text: text.trim() }],
+    if (text && text.trim()) {
+      messages.push({
+        role: role,
+        content: text.trim(),
       });
-      expectedRole = expectedRole === 'user' ? 'model' : 'user';
     }
   }
 
-  // Nếu lịch sử kết thúc bằng 'user', Gemini sẽ báo lỗi khi ta sendMessage(user_message)
-  // Vì vậy ta phải cắt bỏ tin nhắn user cuối cùng trong history nếu có
-  if (historyForGemini.length > 0 && historyForGemini[historyForGemini.length - 1].role === 'user') {
-    historyForGemini.pop();
-  }
+  // Thêm tin nhắn hiện tại của user
+  messages.push({
+    role: 'user',
+    content: message,
+  });
 
-  logger.info(`Chat history processed for Gemini: ${historyForGemini.length} messages`);
+  logger.info(`Chat history processed for SambaNova: ${messages.length} messages`);
 
   let aiResponse = "";
   try {
-    // 3. Gọi API Gemini
-    const model = ai.getGenerativeModel({ 
-      model: "gemini-2.0-flash", 
-      systemInstruction: dynamicSystemPrompt + (canRevealAnswer ? " (Bây giờ bạn có thể gợi ý sát hơn và đưa ra đáp án nếu học sinh đã nỗ lực đủ)" : ""),
+    // 3. Gọi API SambaNova
+    const completion = await openai.chat.completions.create({
+      model: "Meta-Llama-3.3-70B-Instruct", // Cập nhật sang model mới hơn vì Llama 3.1 đã bị gỡ bỏ
+      messages: messages,
+      temperature: 0.7,
+      top_p: 0.9,
     });
 
-    const chat = model.startChat({
-      history: historyForGemini,
-    });
-
-    const result = await chat.sendMessage(message);
-    aiResponse = result.response.text();
+    aiResponse = completion.choices[0].message.content;
   } catch (error) {
-    logger.error("Gemini API Error:", error.message);
+    logger.error("SambaNova API Error:", error.message);
     // FALLBACK HACKATHON: Nếu lỗi (vd: hết Quota), trả về tin nhắn giả lập để demo không bị sập
     if (error.message.includes('429') || error.message.includes('Quota') || error.message.includes('API key')) {
-      aiResponse = `*(Hệ thống AI đang hết Quota API - Đây là phản hồi giả lập)*\n\nChào em, thầy thấy em đang học bài **${subject}**. Em có thể giải thích chi tiết hơn cách em định làm bước tiếp theo không?`;
+      aiResponse = `*(Hệ thống AI đang hết Quota API SambaNova - Đây là phản hồi giả lập)*\n\nChào em, thầy thấy em đang học bài **${subject}**. Em có thể giải thích chi tiết hơn cách em định làm bước tiếp theo không?`;
     } else {
       throw error;
     }
