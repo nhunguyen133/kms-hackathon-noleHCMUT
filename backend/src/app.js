@@ -1,20 +1,32 @@
+require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
+const morgan = require('morgan');
 const routes = require('./routes');
 const logger = require('./utils/logger');
 
 const app = express();
 
-app.use(express.json());
+// Middlewares
+app.use(cors()); // cho phép Frontend (React) giao tiếp với Backend (Node)
+app.use(express.json()); // cho phép đọc JSON từ client
+app.use(morgan('combined', { // Ghi log mọi request (rất tốt để debug lúc Demo)
+    stream: {
+        write: (message) => logger.info(message.trim()),
+    },
+}));
 
+// ROUTES (Định tuyến API)
 app.use('/api', routes);
 
+// ERROR HANDLING (Xử lý Ngoại lệ)
 app.use((req, res, next) => {
     res.status(404).json({ message: 'Route not found' });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    logger.info(`Server is running on port ${PORT}`);
+app.use((err, req, res, next) => {
+  logger.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!', details: err.message });
 });
 
 module.exports = app;
