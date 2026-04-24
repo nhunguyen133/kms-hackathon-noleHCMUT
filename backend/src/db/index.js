@@ -1,11 +1,12 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+// Neon: prefer sslmode=require in DATABASE_URL. Only provide an ssl object when
+// needed to satisfy node-postgres in some environments.
+const useSsl = (process.env.DATABASE_URL || '').includes('sslmode=require');
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false // Required for Neon and many serverless Postgres providers
-  }
+  ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {})
 });
 
 module.exports = {
