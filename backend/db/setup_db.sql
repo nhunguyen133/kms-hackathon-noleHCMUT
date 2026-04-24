@@ -1,6 +1,9 @@
 -- ThinkFirst Database Schema
 -- Based on ARCHITECTURE.md
 
+-- Required for gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- 3.1 Auth & Users
 CREATE TABLE IF NOT EXISTS users (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
