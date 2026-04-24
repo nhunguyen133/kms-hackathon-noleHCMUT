@@ -4,9 +4,22 @@
 -- Required for gen_random_uuid()
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+DROP TABLE IF EXISTS at_risk_flags CASCADE;
+DROP TABLE IF EXISTS ai_interactions CASCADE;
+DROP TABLE IF EXISTS study_sessions CASCADE;
+DROP TABLE IF EXISTS quiz_results CASCADE;
+DROP TABLE IF EXISTS questions CASCADE;
+DROP TABLE IF EXISTS quizzes CASCADE;
+DROP TABLE IF EXISTS learning_roadmaps CASCADE;
+DROP TABLE IF EXISTS learning_profiles CASCADE;
+DROP TABLE IF EXISTS enrollments CASCADE;
+DROP TABLE IF EXISTS lessons CASCADE;
+DROP TABLE IF EXISTS courses CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
 -- 3.1 Auth & Users
 CREATE TABLE IF NOT EXISTS users (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id              VARCHAR(255) PRIMARY KEY,
     name            VARCHAR(255) NOT NULL,
     email           VARCHAR(255) UNIQUE NOT NULL,
     password_hash   VARCHAR(255) NOT NULL,
@@ -17,18 +30,18 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- 3.2 Courses & Enrollment
 CREATE TABLE IF NOT EXISTS courses (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id              VARCHAR(255) PRIMARY KEY,
     title           VARCHAR(255) NOT NULL,
     description     TEXT,
-    teacher_id      UUID NOT NULL REFERENCES users(id),
+    teacher_id      VARCHAR(255) NOT NULL REFERENCES users(id),
     subject         VARCHAR(100),
     is_published    BOOLEAN DEFAULT FALSE,
     created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS lessons (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    course_id       UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    id              VARCHAR(255) PRIMARY KEY,
+    course_id       VARCHAR(255) NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
     title           VARCHAR(255) NOT NULL,
     content         TEXT,
     topic           VARCHAR(100),
@@ -39,9 +52,9 @@ CREATE TABLE IF NOT EXISTS lessons (
 );
 
 CREATE TABLE IF NOT EXISTS enrollments (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id      UUID NOT NULL REFERENCES users(id),
-    course_id       UUID NOT NULL REFERENCES courses(id),
+    id              VARCHAR(255) PRIMARY KEY,
+    student_id      VARCHAR(255) NOT NULL REFERENCES users(id),
+    course_id       VARCHAR(255) NOT NULL REFERENCES courses(id),
     enrolled_at     TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE (student_id, course_id)
 );
@@ -50,7 +63,7 @@ CREATE INDEX IF NOT EXISTS idx_enrollments_student ON enrollments (student_id);
 
 -- 3.3 Learning Profile & Roadmap
 CREATE TABLE IF NOT EXISTS learning_profiles (
-    user_id              UUID PRIMARY KEY REFERENCES users(id),
+    user_id              VARCHAR(255) PRIMARY KEY REFERENCES users(id),
     learning_style       VARCHAR(50),
     goals                TEXT,
     weak_topics          JSONB DEFAULT '[]',
@@ -62,9 +75,9 @@ CREATE TABLE IF NOT EXISTS learning_profiles (
 );
 
 CREATE TABLE IF NOT EXISTS learning_roadmaps (
-    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id           UUID NOT NULL REFERENCES users(id),
-    course_id         UUID NOT NULL REFERENCES courses(id),
+    id                VARCHAR(255) PRIMARY KEY,
+    user_id           VARCHAR(255) NOT NULL REFERENCES users(id),
+    course_id         VARCHAR(255) NOT NULL REFERENCES courses(id),
     recommended_path  JSONB NOT NULL,
     updated_at        TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE (user_id, course_id)
@@ -72,15 +85,15 @@ CREATE TABLE IF NOT EXISTS learning_roadmaps (
 
 -- 3.4 Quiz & Adaptive Engine
 CREATE TABLE IF NOT EXISTS quizzes (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    lesson_id       UUID NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+    id              VARCHAR(255) PRIMARY KEY,
+    lesson_id       VARCHAR(255) NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
     title           VARCHAR(255),
     created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS questions (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    quiz_id         UUID NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
+    id              VARCHAR(255) PRIMARY KEY,
+    quiz_id         VARCHAR(255) NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
     content         TEXT NOT NULL,
     options         JSONB NOT NULL,
     correct_answer  VARCHAR(10) NOT NULL,
@@ -92,9 +105,9 @@ CREATE INDEX IF NOT EXISTS idx_questions_quiz_difficulty ON questions (quiz_id, 
 CREATE INDEX IF NOT EXISTS idx_questions_topic ON questions (topic);
 
 CREATE TABLE IF NOT EXISTS quiz_results (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id         UUID NOT NULL REFERENCES users(id),
-    quiz_id         UUID NOT NULL REFERENCES quizzes(id),
+    id              VARCHAR(255) PRIMARY KEY,
+    user_id         VARCHAR(255) NOT NULL REFERENCES users(id),
+    quiz_id         VARCHAR(255) NOT NULL REFERENCES quizzes(id),
     score           NUMERIC(5,2) NOT NULL,
     difficulty_level VARCHAR(20),
     time_taken      INTEGER,
@@ -106,9 +119,9 @@ CREATE INDEX IF NOT EXISTS idx_quiz_results_quiz_user ON quiz_results (quiz_id, 
 
 -- 3.5 Study Sessions
 CREATE TABLE IF NOT EXISTS study_sessions (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id         UUID NOT NULL REFERENCES users(id),
-    lesson_id       UUID NOT NULL REFERENCES lessons(id),
+    id              VARCHAR(255) PRIMARY KEY,
+    user_id         VARCHAR(255) NOT NULL REFERENCES users(id),
+    lesson_id       VARCHAR(255) NOT NULL REFERENCES lessons(id),
     started_at      TIMESTAMPTZ DEFAULT NOW(),
     completed_at    TIMESTAMPTZ,
     duration        INTEGER,
@@ -118,10 +131,10 @@ CREATE INDEX IF NOT EXISTS idx_study_sessions_user_date ON study_sessions (user_
 
 -- 3.6 AI Chat Log
 CREATE TABLE IF NOT EXISTS ai_interactions (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id         UUID NOT NULL REFERENCES users(id),
-    session_id      UUID NOT NULL,
-    lesson_id       UUID REFERENCES lessons(id),
+    id              VARCHAR(255) PRIMARY KEY,
+    user_id         VARCHAR(255) NOT NULL REFERENCES users(id),
+    session_id      VARCHAR(255) NOT NULL,
+    lesson_id       VARCHAR(255) REFERENCES lessons(id),
     role            VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant')),
     message_index   INTEGER NOT NULL,
     user_message    TEXT,
@@ -132,9 +145,9 @@ CREATE INDEX IF NOT EXISTS idx_ai_interactions_session ON ai_interactions (sessi
 
 -- 3.7 Early Warning System
 CREATE TABLE IF NOT EXISTS at_risk_flags (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    student_id      UUID NOT NULL REFERENCES users(id),
-    course_id       UUID REFERENCES courses(id),
+    id              VARCHAR(255) PRIMARY KEY,
+    student_id      VARCHAR(255) NOT NULL REFERENCES users(id),
+    course_id       VARCHAR(255) REFERENCES courses(id),
     indicator_type  VARCHAR(50) NOT NULL CHECK (indicator_type IN (
                         'low_score_consecutive',
                         'long_inactivity',
