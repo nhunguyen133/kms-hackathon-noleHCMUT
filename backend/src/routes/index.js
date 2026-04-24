@@ -10,5 +10,6 @@ router.use('/auth', authRoutes);
 router.use('/quiz', quizRoutes);
 router.use("/courses", require("../modules/courses/courses.routes"));
 router.use("/lessons", require("../modules/lessons/lessons.routes"));
+router.use("/dashboard", require("../modules/dashboard/dashboard.routes"));
 
 module.exports = router;
